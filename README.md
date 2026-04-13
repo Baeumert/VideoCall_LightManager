@@ -1,77 +1,79 @@
 # VideoCall Light Manager
 
-Erkennt automatisch, ob die Webcam aktiv genutzt wird, und benachrichtigt Home Assistant — per MQTT (mit Auto-Discovery) und/oder Webhook.
+Automatically detects webcam usage and notifies Home Assistant — via MQTT (with Auto-Discovery) and/or Webhook.
 
-**Anwendungsfall:** Smarte Beleuchtungssteuerung die automatisch reagiert, sobald ein Videoanruf startet oder endet.
+**Use case:** Smart lighting that automatically reacts when a video call starts or ends.
 
-## Funktionsweise
+*[Deutsche Version](README.de.md)*
 
-Der Daemon liest periodisch `/proc/[pid]/fd/` aus und prüft, ob ein Prozess ein Video-Device (`/dev/video*`) geöffnet hat. Bei einem Zustandswechsel (Kamera an/aus) werden konfigurierbare Aktionen ausgelöst.
+## How it works
+
+The daemon periodically scans `/proc/[pid]/fd/` to check whether any process has a video device (`/dev/video*`) open. On a state change (camera on/off), configurable actions are triggered.
 
 ```
-Webcam-Zugriff erkannt
+Webcam access detected
         │
         ▼
   CameraMonitor
-  (Debounce-Filter)
+  (Debounce filter)
         │
    ┌────┴────┐
    ▼         ▼
  MQTT      HA Webhook
- (ON/OFF)  (Automatisierung)
+ (ON/OFF)  (Automation)
 ```
 
 ## Features
 
-- **Kein Root** erforderlich — liest nur `/proc` des eigenen Users
-- **MQTT Auto-Discovery** — Gerät erscheint automatisch in Home Assistant
-- **Debounce-Filter** — verhindert Flackern bei kurzen Kamerazugriffen (z.B. Browser-Prüfung)
-- **Last Will Testament** — MQTT-Broker publiziert `OFF` bei unerwartetem Absturz
-- **Systemd User-Service** — startet mit der User-Session, kein Root-Daemon nötig
-- **HA Webhook** — löst HA-Automatisierungen direkt aus
-- **Auto-Reconnect** — MQTT-Verbindung wird automatisch wiederhergestellt
+- **No root required** — only reads `/proc` of the current user
+- **MQTT Auto-Discovery** — device appears automatically in Home Assistant
+- **Debounce filter** — prevents flickering from brief camera accesses (e.g. browser permission checks)
+- **Last Will Testament** — broker publishes `OFF` on unexpected crash
+- **Systemd user service** — starts with the user session, no root daemon needed
+- **HA Webhook** — directly triggers HA automations
+- **Auto-reconnect** — MQTT connection is automatically re-established
 
 ## Installation
 
-### Voraussetzungen
+### Requirements
 
 - Python 3.10+
-- Home Assistant mit MQTT-Integration (Mosquitto o.ä.)
-- Linux (getestet auf Ubuntu/Debian)
+- Home Assistant with MQTT integration (Mosquitto or similar)
+- Linux (tested on Ubuntu/Debian)
 
-### Schritt 1: Repository klonen
+### Step 1: Clone the repository
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/VideoCall_LightManager.git
 cd VideoCall_LightManager
 ```
 
-### Schritt 2: Konfiguration anlegen
+### Step 2: Create your configuration
 
 ```bash
 cp config.yaml.example config.yaml
 ```
 
-Dann `config.yaml` anpassen:
+Then edit `config.yaml`:
 
-| Parameter | Beschreibung |
+| Parameter | Description |
 |---|---|
-| `mqtt.broker` | IP/Hostname des MQTT-Brokers |
-| `mqtt.username` / `mqtt.password` | MQTT-Zugangsdaten |
-| `homeassistant.url` | URL der HA-Instanz |
-| `homeassistant.token` | Long-Lived Access Token (HA → Profil → Tokens) |
-| `camera.debounce_polls` | Anzahl stabiler Polls vor Zustandswechsel (Standard: 2) |
+| `mqtt.broker` | IP/hostname of the MQTT broker |
+| `mqtt.username` / `mqtt.password` | MQTT credentials |
+| `homeassistant.url` | URL of your HA instance |
+| `homeassistant.token` | Long-Lived Access Token (HA → Profile → Tokens) |
+| `camera.debounce_polls` | Stable polls required before state change (default: 2) |
 
-### Schritt 3: Installieren
+### Step 3: Install
 
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
-Das Skript erstellt die virtuelle Umgebung, installiert Abhängigkeiten und richtet den systemd User-Service ein.
+The script creates the virtual environment, installs dependencies, and sets up the systemd user service.
 
-### Service-Verwaltung
+### Service management
 
 ```bash
 systemctl --user status videocall-lightmanager
@@ -79,7 +81,7 @@ systemctl --user restart videocall-lightmanager
 journalctl --user -u videocall-lightmanager -f
 ```
 
-### Autostart ohne Login (optional)
+### Autostart without login (optional)
 
 ```bash
 loginctl enable-linger $USER
@@ -87,27 +89,27 @@ loginctl enable-linger $USER
 
 ## Home Assistant — MQTT Auto-Discovery
 
-Nach dem Start publiziert der Daemon automatisch Discovery-Payloads. In HA erscheint unter **Einstellungen → Geräte & Dienste → MQTT** das Gerät **VideoCall LightManager** mit zwei Entitäten:
+On startup, the daemon automatically publishes discovery payloads. In HA, the device **VideoCall LightManager** appears under **Settings → Devices & Services → MQTT** with two entities:
 
-| Entität | Typ | Topic |
+| Entity | Type | Topic |
 |---|---|---|
 | Video Call Active | `binary_sensor` (device_class: running) | `home/office/videocall/state` |
 | Video Call Camera Device | `sensor` | `home/office/videocall/camera` |
 
-## Home Assistant — Webhook-Automatisierung
+## Home Assistant — Webhook Automation
 
-In HA eine Automatisierung mit Webhook-Auslöser anlegen:
+Create an automation in HA with a Webhook trigger:
 
-- **Auslöser:** Webhook → ID: `videocall_started` (bzw. `videocall_ended`)
-- **Aktion:** z.B. Licht einschalten / Szene aktivieren
+- **Trigger:** Webhook → ID: `videocall_started` (or `videocall_ended`)
+- **Action:** e.g. turn on lights / activate a scene
 
-## Konfigurationsreferenz
+## Configuration reference
 
 ```yaml
 camera:
-  devices: "/dev/video*"     # Glob-Pattern für Kamerageräte
-  poll_interval: 2.0         # Sekunden zwischen Abfragen
-  debounce_polls: 2          # Stabile Polls vor Zustandswechsel
+  devices: "/dev/video*"     # Glob pattern for camera devices
+  poll_interval: 2.0         # Seconds between polls
+  debounce_polls: 2          # Stable polls required before state change
 
 mqtt:
   enabled: true
@@ -115,7 +117,7 @@ mqtt:
   port: 1883
   username: ""
   password: ""
-  ca_certs: ""               # Pfad zu CA-Zertifikat für TLS
+  ca_certs: ""               # Path to CA certificate for TLS
   discovery_enabled: true
   discovery_prefix: "homeassistant"
   topic_state: "home/office/videocall/state"
@@ -135,9 +137,9 @@ homeassistant:
 
 logging:
   level: "INFO"              # DEBUG, INFO, WARNING, ERROR
-  file: ""                   # Leer = nur journald
+  file: ""                   # Empty = journald only
 ```
 
-## Lizenz
+## License
 
 MIT
