@@ -1,0 +1,29 @@
+[Unit]
+Description=VideoCall Light Manager — Webcam-Erkennung und HomeAssistant-Integration
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/it-viking/VideoCall_LightManger/venv/bin/python \
+    /home/it-viking/VideoCall_LightManger/main.py \
+    --config /home/it-viking/VideoCall_LightManger/config.yaml
+
+WorkingDirectory=/home/it-viking/VideoCall_LightManger
+
+# Neustart bei Absturz, aber nicht bei sauberem Exit (Code 0) oder Config-Fehler (Code 1)
+Restart=on-failure
+RestartSec=5s
+# Verhindert Endlos-Restart bei dauerhaftem Fehler
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# Logs gehen an journald (abrufbar mit: journalctl --user -u videocall-lightmanager)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=VCAM
+
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+# Startet mit der grafischen User-Session (kein Root nötig)
+WantedBy=default.target

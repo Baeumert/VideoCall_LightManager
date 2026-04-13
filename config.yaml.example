@@ -1,0 +1,52 @@
+# VideoCall Light Manager — Beispiel-Konfiguration
+# Kopiere diese Datei nach config.yaml und passe die Werte an deine Umgebung an.
+#
+#   cp config.yaml.example config.yaml
+
+camera:
+  # Glob-Pattern für Kamerageräte. Alle passenden Geräte werden überwacht.
+  devices: "/dev/video*"
+  # Sekunden zwischen Abfragen. 2.0 = gutes Gleichgewicht zwischen Reaktionszeit und CPU.
+  poll_interval: 2.0
+  # Anzahl aufeinanderfolgender Polls, die der neue Zustand stabil sein muss, bevor ein
+  # Ereignis ausgelöst wird. Verhindert Flackern (z.B. kurzer Kamerazugriff durch Browser).
+  # 2 = 4s Verzögerung bei poll_interval 2.0  |  1 = kein Debounce
+  debounce_polls: 2
+
+mqtt:
+  enabled: true
+  broker: "192.168.1.100"          # IP oder Hostname des MQTT-Brokers
+  port: 1883
+  keepalive: 60
+  client_id: "videocall-lightmanager"
+  username: "mqtt_user"            # Leer lassen wenn keine Authentifizierung
+  password: "your_mqtt_password"
+  ca_certs: ""                     # Pfad zur CA-Zertifikatsdatei für TLS (leer = kein TLS)
+  # HA MQTT Auto-Discovery
+  discovery_enabled: true
+  discovery_prefix: "homeassistant"   # Standard-Prefix in HA, normalerweise nicht ändern
+  # Topics:
+  topic_state: "home/office/videocall/state"    # Payload: "ON" oder "OFF"
+  topic_camera: "home/office/videocall/camera"  # Payload: /dev/videoN (nur bei ON)
+
+homeassistant:
+  enabled: true
+  url: "http://homeassistant.local:8123"   # URL deiner HA-Instanz
+  token: "your_long_lived_access_token"    # Einstellungen → Profil → Long-Lived Access Tokens
+
+  webhook:
+    enabled: true
+    # Webhook-IDs aus HA: Automatisierung → Auslöser → Webhook
+    webhook_id_on: "videocall_started"
+    webhook_id_off: "videocall_ended"
+
+  input_boolean:
+    enabled: false
+    # Falls du einen input_boolean in HA verwendest (z.B. input_boolean.video_call_active)
+    entity_id: "input_boolean.video_call_active"
+
+logging:
+  level: "INFO"     # DEBUG, INFO, WARNING, ERROR
+  # Optionale Logdatei (leer = nur stdout / journald):
+  file: ""
+  # file: "/var/log/videocall-lightmanager.log"

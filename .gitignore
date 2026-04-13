@@ -1,0 +1,24 @@
+# Eigene Konfiguration mit echten Zugangsdaten — niemals ins Repo!
+config.yaml
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
