@@ -14,6 +14,7 @@ from typing import Optional
 # Allow running directly from the project root
 sys.path.insert(0, str(Path(__file__).parent))
 
+from videocall_lightmanager.audio_monitor import AudioOutputMonitor
 from videocall_lightmanager.camera_monitor import CameraMonitor
 from videocall_lightmanager.config_loader import AppConfig
 from videocall_lightmanager.ha_client import HAClient
@@ -88,6 +89,10 @@ def main() -> None:
     # Initialise components
     monitor = CameraMonitor(cfg.camera.devices, debounce_polls=cfg.camera.debounce_polls)
 
+    audio_monitor: Optional[AudioOutputMonitor] = None
+    if cfg.audio_output.enabled:
+        audio_monitor = AudioOutputMonitor(debounce_polls=cfg.audio_output.debounce_polls)
+
     mqtt_pub: Optional[MQTTPublisher] = None
     if cfg.mqtt.enabled:
         mqtt_pub = MQTTPublisher(cfg.mqtt)
@@ -98,13 +103,15 @@ def main() -> None:
         ha_client = HAClient(cfg.ha)
 
     log.info(
-        "Poll interval: %.1fs | MQTT: %s | HA API: %s",
+        "Poll interval: %.1fs | Audio output: %s | MQTT: %s | HA API: %s",
         cfg.camera.poll_interval,
+        f"enabled (%.1fs)" % cfg.audio_output.poll_interval if audio_monitor else "disabled",
         "enabled" if mqtt_pub else "disabled",
         "enabled" if ha_client else "disabled",
     )
 
     # Main polling loop
+    last_audio_poll: float = 0.0
     try:
         while _running:
             changed, state = monitor.poll()
@@ -118,6 +125,15 @@ def main() -> None:
                     mqtt_pub.publish_state(active=state.active, device=primary_device)
                 if ha_client:
                     ha_client.trigger(active=state.active)
+
+            # Audio output polling on its own interval
+            if audio_monitor:
+                now = time.monotonic()
+                if now - last_audio_poll >= cfg.audio_output.poll_interval:
+                    audio_changed, audio_state = audio_monitor.poll()
+                    last_audio_poll = now
+                    if audio_changed in (True, None) and mqtt_pub and audio_state:
+                        mqtt_pub.publish_audio_output(audio_state.description)
 
             time.sleep(cfg.camera.poll_interval)
 

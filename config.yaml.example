@@ -13,6 +13,15 @@ camera:
   # 2 = 4s Verzögerung bei poll_interval 2.0  |  1 = kein Debounce
   debounce_polls: 2
 
+audio_output:
+  # Erkennt wenn das Standard-Ausgabegerät (Lautsprecher/Kopfhörer) gewechselt wird.
+  # Benötigt 'pactl' (PulseAudio / PipeWire).
+  enabled: false
+  # Sekunden zwischen Abfragen des Standard-Sinks.
+  poll_interval: 3.0
+  # 1 = keine Verzögerung (Gerätewechsel sind bewusste Nutzeraktionen)
+  debounce_polls: 1
+
 mqtt:
   enabled: true
   broker: "192.168.1.100"          # IP oder Hostname des MQTT-Brokers
@@ -28,6 +37,7 @@ mqtt:
   # Topics:
   topic_state: "home/office/videocall/state"    # Payload: "ON" oder "OFF"
   topic_camera: "home/office/videocall/camera"  # Payload: /dev/videoN (nur bei ON)
+  topic_audio_output: "home/office/audio/output" # Payload: Gerätename (z.B. "Built-in Audio")
 
 homeassistant:
   enabled: true

@@ -8,6 +8,13 @@ import yaml
 
 
 @dataclasses.dataclass
+class AudioOutputConfig:
+    enabled: bool
+    poll_interval: float
+    debounce_polls: int
+
+
+@dataclasses.dataclass
 class CameraConfig:
     devices: str        # glob pattern e.g. "/dev/video*"
     poll_interval: float
@@ -26,6 +33,7 @@ class MQTTConfig:
     ca_certs: str       # empty string = no TLS
     topic_state: str
     topic_camera: str
+    topic_audio_output: str
     discovery_enabled: bool
     discovery_prefix: str   # default: "homeassistant"
 
@@ -61,6 +69,7 @@ class LoggingConfig:
 @dataclasses.dataclass
 class AppConfig:
     camera: CameraConfig
+    audio_output: AudioOutputConfig
     mqtt: MQTTConfig
     ha: HAConfig
     logging: LoggingConfig
@@ -77,6 +86,13 @@ class AppConfig:
             debounce_polls=int(cam_raw.get("debounce_polls", 2)),
         )
 
+        ao_raw = raw.get("audio_output", {})
+        audio_output = AudioOutputConfig(
+            enabled=bool(ao_raw.get("enabled", False)),
+            poll_interval=float(ao_raw.get("poll_interval", 3.0)),
+            debounce_polls=int(ao_raw.get("debounce_polls", 1)),
+        )
+
         mq_raw = raw.get("mqtt", {})
         mqtt = MQTTConfig(
             enabled=bool(mq_raw.get("enabled", False)),
@@ -89,6 +105,7 @@ class AppConfig:
             ca_certs=mq_raw.get("ca_certs", ""),
             topic_state=mq_raw.get("topic_state", "home/office/videocall/state"),
             topic_camera=mq_raw.get("topic_camera", "home/office/videocall/camera"),
+            topic_audio_output=mq_raw.get("topic_audio_output", "home/office/audio/output"),
             discovery_enabled=bool(mq_raw.get("discovery_enabled", True)),
             discovery_prefix=mq_raw.get("discovery_prefix", "homeassistant"),
         )
@@ -117,7 +134,7 @@ class AppConfig:
             file=log_raw.get("file", ""),
         )
 
-        cfg = cls(camera=camera, mqtt=mqtt, ha=ha, logging=logging_cfg)
+        cfg = cls(camera=camera, audio_output=audio_output, mqtt=mqtt, ha=ha, logging=logging_cfg)
         cfg._validate()
         return cfg
 

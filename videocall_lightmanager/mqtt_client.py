@@ -94,6 +94,23 @@ class MQTTPublisher:
         )
         log.info("MQTT discovery published: sensor (camera)")
 
+        # Sensor: aktives Audio-Ausgabegerät
+        audio_output_config = {
+            "name": "Audio Output Device",
+            "unique_id": f"{self._cfg.client_id}_audio_output",
+            "state_topic": self._cfg.topic_audio_output,
+            "icon": "mdi:speaker",
+            "retain": True,
+            "device": device,
+        }
+        self._client.publish(
+            topic=f"{prefix}/sensor/{self._cfg.client_id}_audio_output/config",
+            payload=json.dumps(audio_output_config),
+            qos=1,
+            retain=True,
+        )
+        log.info("MQTT discovery published: sensor (audio_output)")
+
     def _on_connect(self, client, userdata, flags, reason_code, properties) -> None:
         if reason_code.is_failure:
             log.error("MQTT connection failed: %s", reason_code)
@@ -165,3 +182,19 @@ class MQTTPublisher:
                 qos=0,
                 retain=False,
             )
+
+    def publish_audio_output(self, description: str) -> None:
+        """Publish the new default audio output device (human-readable description)."""
+        with self._lock:
+            is_connected = self._connected
+        if not is_connected:
+            log.warning("MQTT not connected — audio_output message queued by paho for retry.")
+        self._client.publish(
+            topic=self._cfg.topic_audio_output,
+            payload=description,
+            qos=1,
+            retain=True,
+        )
+        log.debug(
+            "MQTT publish %s -> %s", self._cfg.topic_audio_output, description
+        )
